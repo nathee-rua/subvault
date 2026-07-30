@@ -1,0 +1,16 @@
+title = "Gitleaks Configuration for SubVault"
+
+[allowlist]
+description = "Allowed placeholder strings and fake test fixtures"
+regexes = [
+  '''YOUR_API_KEY''',
+  '''example_key''',
+  '''test_not_a_real_key''',
+  '''sk-test-placeholder''',
+  '''your-.*-placeholder''',
+  '''placeholder-.*''',
+]
+paths = [
+  '''\.env\.example$''',
+  '''docs/.*''',
+]

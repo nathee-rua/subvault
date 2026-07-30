@@ -3,6 +3,13 @@
 All notable changes to SubVault will be documented in this file.
 
 ## [Unreleased]
+### Security
+- Added automated secret-leak prevention guardrails (`scripts/check-secret-boundaries.mjs`).
+- Implemented Gitleaks configuration (`.gitleaks.toml`) and GitHub Actions security workflow (`.github/workflows/security.yml`).
+- Added black-box unit test suites for AES-256-GCM encryption and API response DTO payload masking (`src/lib/encryption.test.ts`, `src/lib/api-contracts.test.ts`).
+- Added SQL RLS isolation test suite (`supabase/tests/rls_verification_test.sql`).
+- Updated `.gitignore` with strict rules for private key files, backups, and secret filenames.
+- Created `docs/SECURITY_GUARDRAILS.md` documenting secret classification, local CLI commands, and incident response.
 
 ## [1.0.0] - 2026-07-30
 ### Added

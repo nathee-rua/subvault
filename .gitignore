@@ -1,26 +1,32 @@
 # dependencies
-/node_modules
+node_modules/
 /.pnpm-store
 
 # next.js
-/app-temp/.next/
-/app-temp/out/
+.next/
+out/
+app-temp/.next/
+app-temp/out/
 
 # production
-/app-temp/build
+build/
+app-temp/build/
 
 # misc
 .DS_Store
+*.log
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.key
+*.p12
+*.pfx
+secrets/
+backups/
+coverage/
 
 # local env files
-.env*.local
 .env
+.env.*
+!.env.example
 
 # vercel
 .vercel
