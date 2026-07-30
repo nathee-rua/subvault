@@ -17,3 +17,9 @@
 - **Context:** Requirement for secure vault storing account emails, passwords, and private notes.
 - **Decision:** Encryption helper `src/lib/encryption.ts` using Node/Web Crypto AES-256-GCM. Payload format: `v1:iv_hex:auth_tag_hex:ciphertext_hex`.
 - **Consequences:** High security boundary for credentials, masked in UI by default with explicit user reveal toggles.
+
+## ADR 004: Playwright E2E Testing Framework & Safety Guardrails
+- **Date:** 2026-07-31
+- **Context:** Need automated browser acceptance testing without risk of executing mutating tests against live production endpoints.
+- **Decision:** Adopt Playwright for cross-browser testing with pre-flight script `scripts/assert-e2e-safe-env.mjs` asserting `E2E_TEST_MODE=true` and non-production URLs before test execution.
+- **Consequences:** Reliable E2E coverage for subscriptions, credentials, settings, and webhook simulations in CI/CD without production risk.
