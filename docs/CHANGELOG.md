@@ -4,14 +4,13 @@ All notable changes to SubVault will be documented in this file.
 
 ## [Unreleased]
 ### Security
-- Added distinct npm security commands (`security:boundaries`, `secrets:check`, `secrets:history`, `security:check`, `db:test`).
-- Configured pgTAP RLS verification test file at `supabase/tests/database/rls_verification.test.sql`.
-- Updated GitHub Actions workflow (`.github/workflows/security.yml`) with `workflow_dispatch`, `permissions: contents: read`, `fetch-depth: 0`, and non-deploy security steps.
-- Configured history scanning and pathspec exclusions for automated secret boundary scripts.
+- Installed `@b12k/gitleaks` wrapper package ensuring Gitleaks v8.30.1 availability in local environments.
+- Updated npm script wiring so `secrets:check` runs `npx gitleaks dir . --config .gitleaks.toml --redact --exit-code 1 --no-banner` and `secrets:history` runs `npx gitleaks git . --config .gitleaks.toml --redact --exit-code 1 --no-banner`.
+- Verified working tree and Git history scans with Gitleaks 8.30.1.
 
 ## [1.0.0] - 2026-07-30
 ### Added
-- Complete modern AI Sci-Fi UI design system with particle backgrounds, glowing glassmorphism cards, and cyan/violet accents.
+- Complete modern AI Sci-Fi UI design system with particle backgrounds, glowing glassmorphic cards, and cyan/violet accents.
 - User authentication flow using single-user MVP username system.
 - Interactive Dashboard with spending analytics, renewal timelines, and risk alerts built with Recharts.
 - Subscription Vault List supporting search, category filter, status filter, sorting, grid/list view toggle, and soft-delete/restore.

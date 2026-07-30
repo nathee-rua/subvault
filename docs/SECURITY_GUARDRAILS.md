@@ -29,16 +29,16 @@ Personal user credentials (accounts, passwords, private notes) stored in the sub
 
 ## 2. Automated Quality Gates & Local Developer Commands
 
-Developers can run automated security checks before committing code:
+SubVault includes dedicated Gitleaks secret-scanning commands powered by `@b12k/gitleaks` (v8.30.1):
 
 ```bash
 # 1. Security boundary check (detects server secret imports in client components & forbidden files)
 npm run security:boundaries
 
-# 2. Secret leak scan (working tree content check)
+# 2. Gitleaks working-tree scan
 npm run secrets:check
 
-# 3. Secret history scan (Git log history check)
+# 3. Gitleaks Git-history scan
 npm run secrets:history
 
 # 4. Combined security check
