@@ -35,19 +35,42 @@ Developers can run automated security checks before committing code:
 # 1. Security boundary check (detects server secret imports in client components & forbidden files)
 npm run security:boundaries
 
-# 2. Secret leak scan (Gitleaks pattern check)
+# 2. Secret leak scan (working tree content check)
 npm run secrets:check
 
-# 3. Unit test suite (encryption contracts & API payload masking)
+# 3. Secret history scan (Git log history check)
+npm run secrets:history
+
+# 4. Combined security check
+npm run security:check
+
+# 5. Database RLS pgTAP test suite (requires local Supabase CLI & Docker)
+npm run db:test
+
+# 6. Unit test suite (encryption contracts & API payload masking)
 npm run test
 
-# 4. Production build verification
+# 7. Production build verification
 npm run build
 ```
 
 ---
 
-## 3. Incident Response Protocol (Accidental Secret Leak)
+## 3. Database RLS Testing (Supabase CLI / pgTAP)
+
+Database RLS policies are verified via pgTAP test suite at `supabase/tests/database/rls_verification.test.sql`.
+
+To run database tests locally:
+1. Ensure Supabase CLI and Docker are installed and running.
+2. Execute:
+   ```bash
+   supabase test db
+   ```
+*Note: Database tests run against local container instances only and are never executed against production environments.*
+
+---
+
+## 4. Incident Response Protocol (Accidental Secret Leak)
 
 If an environment secret or real key is accidentally exposed or committed to the repository:
 
@@ -58,9 +81,10 @@ If an environment secret or real key is accidentally exposed or committed to the
 
 ---
 
-## 4. Continuous Integration (GitHub Actions)
+## 5. Continuous Integration (GitHub Actions)
 
-The `.github/workflows/security.yml` pipeline automatically runs on `push` and `pull_request` to `main`/`master` branches, enforcing:
+The `.github/workflows/security.yml` pipeline automatically runs on `push`, `pull_request`, and `workflow_dispatch` to `main`/`master` branches with `permissions: contents: read`, enforcing:
 - Gitleaks secret pattern scanning (`.gitleaks.toml`).
 - Static security boundary check (`scripts/check-secret-boundaries.mjs`).
+- Black-box unit tests (`src/lib/*.test.ts`).
 - Next.js production compilation and TypeScript type checking.

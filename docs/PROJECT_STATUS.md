@@ -6,24 +6,21 @@
 - **Stack:** Next.js 15 (App Router), TypeScript, Glassmorphism Vanilla CSS, Zustand, Recharts, Lucide Icons, Framer Motion, AES-256-GCM, Supabase PostgreSQL, Vercel Cron, Gitleaks.
 
 ## Current State & Phase
-- **Current Phase:** Phase 6 - Automated Security Guardrails & Secret Leak Prevention Active
+- **Current Phase:** Phase 7 - Gitleaks & Database Guardrail Verification Complete
 - **Branch:** master
-- **Clean Build & Test Status:** All 8 unit tests passed, 0 security boundary violations, clean `npx next build` production build.
+- **Clean Build & Test Status:** All 8 unit tests passed, 0 security boundary violations, 0 history scan violations, clean `npx next build` production build.
 
 ## Automated Guardrail Commands
 - `npm run security:boundaries` - Static check for server-only secret references and NEXT_PUBLIC naming.
-- `npm run secrets:check` - Local secret leak verification.
-- `npm run test` - Unit tests for encryption contracts and API data sanitization.
+- `npm run secrets:check` - Working tree secret leak verification.
+- `npm run secrets:history` - Git commit history secret scan.
+- `npm run security:check` - Combined boundary and secret check.
+- `npm run db:test` - Supabase pgTAP database RLS test suite (`supabase test db`).
+- `npm run test` - Unit tests for encryption contracts and API payload masking.
 - `npm run build` - Full Next.js typecheck and production build.
 
-## Verified Routes & Tools
-- `○ /` - Sci-Fi Particle Login Page
-- `○ /dashboard` - Analytics & KPI Overview
-- `○ /vault` - Subscription Vault List & Filter
-- `○ /vault/add` - 4-step Subscription Add/Edit Wizard
-- `ƒ /vault/[id]` - Credential Vault & Subscription Details
-- `○ /settings` - System Settings & Reminder Preferences
-- `.github/workflows/security.yml` - CI secret scan & boundary pipeline
+## Manual Pending Validations
+- `npm run db:test`: Requires local Docker and Supabase CLI installed (`supabase test db`). SQL structure verified statically in `supabase/tests/database/rls_verification.test.sql`.
 
-Last Updated: 2026-07-30 21:46 ICT
+Last Updated: 2026-07-30 21:54 ICT
 Last Updated By: Antigravity 2.0

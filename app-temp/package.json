@@ -9,6 +9,9 @@
     "lint": "eslint",
     "security:boundaries": "node scripts/check-secret-boundaries.mjs",
     "secrets:check": "node scripts/check-secret-boundaries.mjs",
+    "secrets:history": "node scripts/check-secret-boundaries.mjs --scan-history",
+    "security:check": "npm run security:boundaries && npm run secrets:check",
+    "db:test": "supabase test db",
     "test": "tsx --test src/lib/*.test.ts"
   },
   "dependencies": {

@@ -1,0 +1,17 @@
+{
+  "name": "subvault-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix app-temp run dev",
+    "build": "npm --prefix app-temp run build",
+    "start": "npm --prefix app-temp run start",
+    "lint": "npm --prefix app-temp run lint",
+    "test": "npm --prefix app-temp run test",
+    "security:boundaries": "node app-temp/scripts/check-secret-boundaries.mjs",
+    "secrets:check": "node app-temp/scripts/check-secret-boundaries.mjs",
+    "secrets:history": "node app-temp/scripts/check-secret-boundaries.mjs --scan-history",
+    "security:check": "npm run security:boundaries && npm run secrets:check",
+    "db:test": "supabase test db"
+  }
+}
