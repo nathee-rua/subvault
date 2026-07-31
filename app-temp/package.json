@@ -12,7 +12,8 @@
     "secrets:history": "npx gitleaks git .. --config ../.gitleaks.toml --redact --exit-code 1 --no-banner",
     "security:check": "npm run security:boundaries && npm run secrets:check",
     "db:test": "supabase test db",
-    "test": "tsx --test src/lib/*.test.ts"
+    "test": "tsx --test src/lib/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

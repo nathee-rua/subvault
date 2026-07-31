@@ -8,6 +8,7 @@
     "start": "npm --prefix app-temp run start",
     "lint": "npm --prefix app-temp run lint",
     "test": "npm --prefix app-temp run test",
+    "typecheck": "npm --prefix app-temp run typecheck",
     "security:boundaries": "node app-temp/scripts/check-secret-boundaries.mjs",
     "secrets:check": "npx gitleaks dir . --config .gitleaks.toml --redact --exit-code 1 --no-banner",
     "secrets:history": "npx gitleaks git . --config .gitleaks.toml --redact --exit-code 1 --no-banner",

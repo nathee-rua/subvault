@@ -4,10 +4,13 @@ All notable changes to SubVault will be documented in this file.
 
 ## [Unreleased]
 ### Testing
-- Integrated Playwright v1.62 E2E browser acceptance testing suite (`tests/e2e/`).
+- Integrated and verified Playwright v1.62 E2E browser acceptance testing suite (`tests/e2e/`), executing 22/22 tests across Chromium Desktop and Mobile viewports.
 - Added environment safety guard script (`scripts/assert-e2e-safe-env.mjs`) to prevent running destructive E2E tests against production environments.
 - Added GitHub Actions workflow (`.github/workflows/e2e.yml`) for automated Playwright browser testing on pull requests and main/master pushes.
-- Added HTML report generation script (`scripts/generate-e2e-report.mjs`) and E2E guide (`docs/E2E_TESTING.md`).
+- Added HTML report generation script (`scripts/generate-e2e-report.mjs`), E2E summary report (`docs/test-reports/latest-e2e-summary.md`), and E2E guide (`docs/E2E_TESTING.md`).
+
+### Fixed
+- Fixed mobile layout grid column overflow (`minmax(400px, 1fr)`) on mobile viewports in `DashboardPage`.
 
 ### Security
 - Installed `@b12k/gitleaks` wrapper package ensuring Gitleaks v8.30.1 availability in local environments.

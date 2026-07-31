@@ -5,8 +5,11 @@ test.describe('Mobile Viewport & Layout Responsiveness', () => {
 
   test('P2: Mobile navigation and dashboard render without horizontal overflow', async ({ page }) => {
     await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await page.getByPlaceholder(/Enter your username/i).fill('e2e_test_user');
-    await page.getByRole('button', { name: /Enter Vault/i }).click();
+    await page.getByPlaceholder(/Enter your password/i).fill('password123');
+    await page.getByRole('button', { name: /Unlock Vault|Create Vault/i }).click();
     await expect(page).toHaveURL(/\/dashboard/);
 
     // Verify viewport bounds
