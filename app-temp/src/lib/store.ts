@@ -217,6 +217,7 @@ interface StoreState {
   // Auth
   isAuthenticated: boolean;
   user: UserProfile | null;
+  hasInitialized: boolean;
   
   // Data
   subscriptions: Subscription[];
@@ -254,6 +255,7 @@ export const useStore = create<StoreState>()(
       // Initial state
       isAuthenticated: false,
       user: null,
+      hasInitialized: false,
       subscriptions: [],
       customProviders: [],
       reminderPreferences: {
@@ -275,9 +277,9 @@ export const useStore = create<StoreState>()(
           };
           set({ isAuthenticated: true, user });
           
-          // Load demo data if first time
-          if (get().subscriptions.length === 0) {
-            set({ subscriptions: DEMO_SUBSCRIPTIONS });
+          // Load demo data only on initial first-time launch
+          if (!get().hasInitialized) {
+            set({ subscriptions: DEMO_SUBSCRIPTIONS, hasInitialized: true });
           }
           return true;
         }
@@ -389,6 +391,7 @@ export const useStore = create<StoreState>()(
         set({
           subscriptions: [],
           customProviders: [],
+          hasInitialized: true,
         });
       },
     }),
@@ -397,6 +400,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         user: state.user,
+        hasInitialized: state.hasInitialized,
         subscriptions: state.subscriptions,
         customProviders: state.customProviders,
         reminderPreferences: state.reminderPreferences,
