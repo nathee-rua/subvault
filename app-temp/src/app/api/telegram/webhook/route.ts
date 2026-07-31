@@ -1,5 +1,5 @@
 // ============================================
-// SubVault - Telegram Webhook Handler (Smart AI & BE Year Parser)
+// SubVault - Telegram Webhook Handler (Comprehensive B.E./C.E. Date Parser)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { encrypt } from '@/lib/encryption';
 
 export const runtime = 'nodejs';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8728086041:AAEzG4fGumZcTvxW-SI9QwAU5RAdFBbtI6A';
 const VAULT_ENCRYPTION_KEY = process.env.VAULT_ENCRYPTION_KEY;
 
 interface ParsedEntry {
@@ -20,9 +20,86 @@ interface ParsedEntry {
   notes?: string;
 }
 
+const THAI_MONTH_MAP: Record<string, string> = {
+  'ม.ค.': '01', 'มกราคม': '01', 'มกรา': '01', 'jan': '01', 'january': '01',
+  'ก.พ.': '02', 'กุมภาพันธ์': '02', 'กุมภา': '02', 'feb': '02', 'february': '02',
+  'มี.ค.': '03', 'มีนาคม': '03', 'มีนา': '03', 'mar': '03', 'march': '03',
+  'เม.ย.': '04', 'เมษายน': '04', 'เมษา': '04', 'apr': '04', 'april': '04',
+  'พ.ค.': '05', 'พฤษภาคม': '05', 'พฤษภา': '05', 'may': '05',
+  'มิ.ย.': '06', 'มิถุนายน': '06', 'มิถุนา': '06', 'jun': '06', 'june': '06',
+  'ก.ค.': '07', 'กรกฎาคม': '07', 'กรกฎา': '07', 'jul': '07', 'july': '07',
+  'ส.ค.': '08', 'สิงหาคม': '08', 'สิงหา': '08', 'aug': '08', 'august': '08',
+  'ก.ย.': '09', 'กันยายน': '09', 'กันยา': '09', 'sep': '09', 'september': '09',
+  'ต.ค.': '10', 'ตุลาคม': '10', 'ตุลา': '10', 'oct': '10', 'october': '10',
+  'พ.ย.': '11', 'พฤศจิกายน': '11', 'พฤศจิกา': '11', 'nov': '11', 'november': '11',
+  'ธ.ค.': '12', 'ธันวาคม': '12', 'ธันวา': '12', 'dec': '12', 'december': '12',
+};
+
+/**
+ * Normalize any 2-digit or 4-digit B.E. / C.E. year to 4-digit C.E. (YYYY)
+ */
+function normalizeYearToCE(yearNum: number): number {
+  if (yearNum > 2400) {
+    // 4-digit B.E. year (e.g. 2569 -> 2026)
+    return yearNum - 543;
+  }
+  if (yearNum >= 2000 && yearNum <= 2100) {
+    // 4-digit C.E. year (e.g. 2026)
+    return yearNum;
+  }
+  if (yearNum >= 60 && yearNum <= 99) {
+    // 2-digit B.E. year (e.g. 69 -> 2569 - 543 = 2026)
+    return (2500 + yearNum) - 543;
+  }
+  if (yearNum >= 20 && yearNum <= 59) {
+    // 2-digit C.E./B.E. year (e.g. 26 -> 2026)
+    return 2000 + yearNum;
+  }
+  return yearNum;
+}
+
+/**
+ * Parse any B.E. or C.E. date format into ISO YYYY-MM-DD
+ * Handles 24.9.26, 24/9/2569, 24-09-2026, 24 ก.ย. 2569, 2026-09-24
+ */
+function parseAnyDateToCE(text: string): string | null {
+  const clean = text.trim();
+
+  // Pattern 1: ISO YYYY-MM-DD or YYYY.MM.DD
+  const isoMatch = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if (isoMatch) {
+    const y = normalizeYearToCE(parseInt(isoMatch[1], 10));
+    const m = String(parseInt(isoMatch[2], 10)).padStart(2, '0');
+    const d = String(parseInt(isoMatch[3], 10)).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // Pattern 2: DD.MM.YY or DD/MM/YY or DD-MM-YY (e.g. 24.9.26, 24/9/2569)
+  const dmyMatch = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (dmyMatch) {
+    const d = String(parseInt(dmyMatch[1], 10)).padStart(2, '0');
+    const m = String(parseInt(dmyMatch[2], 10)).padStart(2, '0');
+    const y = normalizeYearToCE(parseInt(dmyMatch[3], 10));
+    return `${y}-${m}-${d}`;
+  }
+
+  // Pattern 3: Thai/English named months (e.g. 24 ก.ย. 2569, 24 Sep 2026)
+  const textMonthMatch = clean.match(/^(\d{1,2})\s+([ก-ฮa-zA-Z\.]+)\s+(\d{2,4})$/);
+  if (textMonthMatch) {
+    const d = String(parseInt(textMonthMatch[1], 10)).padStart(2, '0');
+    const monthStr = textMonthMatch[2].toLowerCase();
+    const m = THAI_MONTH_MAP[monthStr];
+    if (m) {
+      const y = normalizeYearToCE(parseInt(textMonthMatch[3], 10));
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Smart Text Parser for Telegram messages
- * Handles Thai BE Year (e.g. 2569 -> 2026), Acc/Email separation, Pass/Key separation
  */
 function parseTelegramText(rawText: string): ParsedEntry {
   const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
@@ -40,32 +117,10 @@ function parseTelegramText(rawText: string): ParsedEntry {
 
   const accountRegex = /^(?:acc|account|email|user|username)\s*:\s*(.+)$/i;
   const passwordRegex = /^(?:pass|password|key|pw|secret)\s*:\s*(.+)$/i;
-  const expiryRegex = /(?:หมดอายุ|expiry|exp|due|renew|renewal)\s*:\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
-  const isoDateRegex = /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/;
-  const dmyDateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/;
+  const expiryLabelRegex = /^(?:หมดอายุ|expiry|expired|exp|due|renew|renewal)\s*:?\s*(.*)$/i;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
-
-    // Check Expiry Date in line
-    const expMatch = line.match(expiryRegex);
-    if (expMatch) {
-      let day = parseInt(expMatch[1], 10);
-      let month = parseInt(expMatch[2], 10);
-      let year = parseInt(expMatch[3], 10);
-
-      // Convert BE year to AD year if year > 2400
-      if (year > 2400) {
-        year = year - 543;
-      } else if (year < 100) {
-        year = 2000 + year;
-      }
-
-      const mm = String(month).padStart(2, '0');
-      const dd = String(day).padStart(2, '0');
-      expiryDate = `${year}-${mm}-${dd}`;
-      continue;
-    }
 
     // Check Account
     const accMatch = line.match(accountRegex);
@@ -81,6 +136,37 @@ function parseTelegramText(rawText: string): ParsedEntry {
       continue;
     }
 
+    // Check Expiry Date Label or multi-line Expiry Line (e.g. Expired \n 24.9.26)
+    const expLabelMatch = line.match(expiryLabelRegex);
+    if (expLabelMatch) {
+      const inlineDateText = expLabelMatch[1].trim();
+      if (inlineDateText) {
+        const parsedDate = parseAnyDateToCE(inlineDateText);
+        if (parsedDate) {
+          expiryDate = parsedDate;
+          continue;
+        }
+      }
+      // Check if date is on the very next line
+      if (i + 1 < lines.length) {
+        const nextLineDate = parseAnyDateToCE(lines[i + 1]);
+        if (nextLineDate) {
+          expiryDate = nextLineDate;
+          i++; // skip next line
+          continue;
+        }
+      }
+    }
+
+    // Check standalone date on line (e.g. 24.9.26 or 24/9/2569)
+    if (!expiryDate) {
+      const standaloneDate = parseAnyDateToCE(line);
+      if (standaloneDate) {
+        expiryDate = standaloneDate;
+        continue;
+      }
+    }
+
     // Check standalone email pattern
     if (!account && line.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
       account = line.trim();
@@ -91,25 +177,6 @@ function parseTelegramText(rawText: string): ParsedEntry {
     if (!password && line.match(/^(?:sk-|xai-|AQ|ghp_|eyJ)[a-zA-Z0-9._\-]+$/)) {
       password = line.trim();
       continue;
-    }
-
-    // Check standalone date DD/MM/YYYY or YYYY-MM-DD
-    if (!expiryDate) {
-      const isoMatch = line.match(isoDateRegex);
-      if (isoMatch) {
-        expiryDate = `${isoMatch[1]}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
-        continue;
-      }
-      const dmyMatch = line.match(dmyDateRegex);
-      if (dmyMatch) {
-        let day = parseInt(dmyMatch[1], 10);
-        let month = parseInt(dmyMatch[2], 10);
-        let year = parseInt(dmyMatch[3], 10);
-        if (year > 2400) year -= 543;
-        else if (year < 100) year += 2000;
-        expiryDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        continue;
-      }
     }
 
     // Fallback: append line to notes or password
@@ -130,7 +197,7 @@ function parseTelegramText(rawText: string): ParsedEntry {
   const lowerName = providerName.toLowerCase();
   if (lowerName.includes('ai') || lowerName.includes('grok') || lowerName.includes('gpt') || lowerName.includes('claude') || lowerName.includes('openai')) {
     category = 'ai';
-  } else if (lowerName.includes('vpn')) {
+  } else if (lowerName.includes('vpn') || lowerName.includes('proton')) {
     category = 'vpn';
   } else if (lowerName.includes('netfl') || lowerName.includes('tube') || lowerName.includes('spotify')) {
     category = 'streaming';
@@ -333,7 +400,7 @@ export async function POST(request: NextRequest) {
     if (rawText.startsWith('/start')) {
       await sendTelegramMessage(
         chatId,
-        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription text directly to this chat!\n\n<b>Example:</b>\n<code>Super Grok\nAcc: user@outlook.com\npass: MonicaMercedes37\nหมดอายุ : 10/9/2569</code>`
+        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription text directly to this chat!\n\n<b>Example:</b>\n<code>PROTRon VPN 2mo\npyeproton604@proton.me\nAhsg836#Hsgdjej2\nExpired\n24.9.26</code>`
       );
       return NextResponse.json({ ok: true });
     }
