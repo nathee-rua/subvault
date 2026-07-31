@@ -529,29 +529,54 @@ export default function SettingsPage() {
               <Database size={20} style={{ color: '#00ff88' }} />
               Storage Backend
             </div>
-            <div style={{
-              padding: 16,
-              borderRadius: 12,
-              background: 'rgba(0,255,136,0.05)',
-              border: '1px solid rgba(0,255,136,0.15)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: '#00ff88',
-                  boxShadow: '0 0 8px rgba(0,255,136,0.5)',
-                }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>
-                  Browser localStorage
-                </span>
+            {process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') ? (
+              <div style={{
+                padding: 16,
+                borderRadius: 12,
+                background: 'rgba(0,255,136,0.05)',
+                border: '1px solid rgba(0,255,136,0.15)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#00ff88',
+                    boxShadow: '0 0 8px rgba(0,255,136,0.5)',
+                  }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>
+                    Supabase PostgreSQL Cloud Storage (Connected)
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Cloud database is connected and active. Database instance: <code style={{ color: '#00f0ff', fontFamily: 'var(--font-mono)' }}>vnueckwzcovkzremoqzz</code> (Region: ap-southeast-1).
+                </p>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Data is stored locally in your browser. To connect to Supabase for cloud storage, 
-                configure the environment variables in your Vercel project settings.
-              </p>
-            </div>
+            ) : (
+              <div style={{
+                padding: 16,
+                borderRadius: 12,
+                background: 'rgba(0,255,136,0.05)',
+                border: '1px solid rgba(0,255,136,0.15)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#00ff88',
+                    boxShadow: '0 0 8px rgba(0,255,136,0.5)',
+                  }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>
+                    Browser localStorage
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Data is stored locally in your browser. To connect to Supabase for cloud storage, 
+                  configure the environment variables in your Vercel project settings.
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       )}
