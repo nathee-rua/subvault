@@ -2,7 +2,15 @@
 
 All notable changes to SubVault will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] - 2026-07-31
+### Security
+- **Secret Remediation:** Removed hardcoded Telegram bot token fallback string from `route.ts`. Telegram Bot API token is strictly sourced from `process.env.TELEGRAM_BOT_TOKEN`.
+- **Gitleaks Scan:** Verified working tree scan `npm run secrets:check` (775 MB scanned, 0 leaks).
+
+### Added & Fixed
+- **Smart Text Parser:** Implemented Thai BE Year conversion (`2569` -> `2026`) and automatic separation of `Account` and `Password` fields from raw Telegram messages into respective database columns.
+- **Telegram Interactive Prompt:** Added Inline Keyboard buttons (`Confirm & Save to Vault` / `Cancel`) requiring explicit user confirmation before writing rows into Supabase PostgreSQL.
+- **Real-Time Cloud Synchronization:** Implemented 8-second auto-polling and window focus listener in `AppShell.tsx` for real-time dashboard and vault updates.
 
 ## [1.0.0] - 2026-07-31
 ### Deployment & Infrastructure
