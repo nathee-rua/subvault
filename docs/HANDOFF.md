@@ -13,9 +13,9 @@
 
 ## Repository State
 - **GitHub Repository:** [https://github.com/nathee-rua/subvault](https://github.com/nathee-rua/subvault)
-- **Vercel Production URL:** [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app)
+- **Vercel Production URL:** [https://travelbozvault.vercel.app](https://travelbozvault.vercel.app)
 - **Supabase Project:** SubVault (`vnueckwzcovkzremoqzz`)
-- **Working tree clean:** Ready for commit `chore(deploy): finalize production deployment documentation`.
+- **Working tree clean:** Ready for commit `chore(deploy): update production URL to TravelbozVault`.
 
 ## Validation Performed
 - `npm run security:boundaries`: 🟢 PASSED (0 violations).
@@ -25,7 +25,7 @@
 - `npm run typecheck`: 🟢 PASSED (0 errors).
 - `npm run e2e`: 🟢 PASSED (22/22 browser tests passed).
 - `npm run build`: 🟢 PASSED (10 routes compiled).
-- `Production HTTP`: 🟢 PASSED (200 OK from `https://app-temp-pink.vercel.app`).
+- `Production HTTP`: 🟢 PASSED (200 OK from `https://travelbozvault.vercel.app`).
 
 ## Next Recommended Task
 - Share production URL [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app) with user and start live usage.

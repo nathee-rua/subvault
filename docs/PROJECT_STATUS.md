@@ -4,14 +4,14 @@
 - **Name:** SubVault - Personal Subscription Tracker + Encrypted Credential Vault
 - **Purpose:** Sci-fi themed Next.js 15 web app for managing personal subscriptions and encrypted credential storage.
 - **Stack:** Next.js 15 (App Router), TypeScript, Glassmorphism Vanilla CSS, Zustand, Recharts, Lucide Icons, Framer Motion, AES-256-GCM, Supabase PostgreSQL 17, Vercel Cron, Gitleaks 8.30.1, Playwright 1.62.
-- **Production URL:** [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app)
+- **Production URL:** [https://travelbozvault.vercel.app](https://travelbozvault.vercel.app)
 - **GitHub Repository:** [https://github.com/nathee-rua/subvault](https://github.com/nathee-rua/subvault)
 - **Supabase Project:** SubVault (`vnueckwzcovkzremoqzz` in `ap-southeast-1`)
 
 ## Current State & Phase
 - **Current Phase:** Phase 10 - Live Production Deployment Complete
 - **Branch:** master
-- **Status:** Supabase PostgreSQL 17 database created & migrated with RLS policies, Git repository connected & pushed to GitHub `nathee-rua/subvault`, Vercel production deployment active & healthy at [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app).
+- **Status:** Supabase PostgreSQL 17 database created & migrated with RLS policies, Git repository connected & pushed to GitHub `nathee-rua/subvault`, Vercel production deployment active & healthy at [https://travelbozvault.vercel.app](https://travelbozvault.vercel.app).
 
 ## Automated Guardrail Commands
 - `npm run security:boundaries` - Static check for server-only secret references (`node app-temp/scripts/check-secret-boundaries.mjs`).
