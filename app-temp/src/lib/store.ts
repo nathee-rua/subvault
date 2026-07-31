@@ -227,6 +227,11 @@ interface StoreState {
   // UI
   sidebarOpen: boolean;
   
+  // Integrations & AI
+  geminiApiKey: string;
+  selectedGeminiModel: string;
+  setGeminiConfig: (apiKey: string, model: string) => void;
+
   // Actions
   login: (username: string, password: string) => boolean;
   logout: () => void;
@@ -266,6 +271,12 @@ export const useStore = create<StoreState>()(
         dailyDigestHourUtc: 1,
       },
       sidebarOpen: true,
+      geminiApiKey: '',
+      selectedGeminiModel: 'gemini-3.5-flash-lite',
+
+      setGeminiConfig: (apiKey: string, model: string) => {
+        set({ geminiApiKey: apiKey, selectedGeminiModel: model });
+      },
 
       // Auth
       login: (username: string, password: string) => {

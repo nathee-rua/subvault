@@ -10,7 +10,10 @@ import {
 import { useState, useCallback } from 'react';
 
 export default function SettingsPage() {
-  const { user, reminderPreferences, updateReminderPreferences, clearAllData, subscriptions } = useStore();
+  const { 
+    user, reminderPreferences, updateReminderPreferences, clearAllData, subscriptions,
+    geminiApiKey: storedGeminiKey, selectedGeminiModel: storedGeminiModel, setGeminiConfig
+  } = useStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'integrations' | 'data'>('notifications');
   const [saved, setSaved] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -27,10 +30,10 @@ export default function SettingsPage() {
   });
 
   // Gemini API Configuration State
-  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState(storedGeminiKey || '');
   const [showGeminiKey, setShowGeminiKey] = useState(false);
-  const [geminiModels, setGeminiModels] = useState<string[]>(['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro']);
-  const [selectedGeminiModel, setSelectedGeminiModel] = useState('gemini-2.5-flash');
+  const [geminiModels, setGeminiModels] = useState<string[]>(['gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro']);
+  const [selectedGeminiModel, setSelectedGeminiModel] = useState(storedGeminiModel || 'gemini-3.5-flash-lite');
   const [geminiLoading, setGeminiLoading] = useState(false);
   const [geminiStatus, setGeminiStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -119,9 +122,10 @@ export default function SettingsPage() {
       if (!res.ok || data.error) {
         setGeminiStatus({ type: 'error', msg: data.error || 'Connection test failed' });
       } else {
+        setGeminiConfig(geminiApiKey, selectedGeminiModel);
         setGeminiStatus({
           type: 'success',
-          msg: `Connection successful! Model ${data.model} responded: "${data.responseText}"`,
+          msg: `Connection successful! Model ${data.model} saved & active! Response: "${data.responseText}"`,
         });
       }
     } catch (err: any) {
