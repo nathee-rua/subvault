@@ -350,28 +350,59 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      updateSubscription: (id: string, data: Partial<Subscription>) => {
+      updateSubscription: async (id: string, data: Partial<Subscription>) => {
         set((state) => ({
           subscriptions: state.subscriptions.map((s) =>
             s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s
           ),
         }));
+
+        try {
+          await fetch('/api/subscriptions', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, ...data }),
+          });
+        } catch (e) {
+          console.warn('Could not update in cloud API:', e);
+        }
       },
 
-      deleteSubscription: (id: string) => {
+      deleteSubscription: async (id: string) => {
+        const deletedAt = new Date().toISOString();
         set((state) => ({
           subscriptions: state.subscriptions.map((s) =>
-            s.id === id ? { ...s, deletedAt: new Date().toISOString() } : s
+            s.id === id ? { ...s, deletedAt } : s
           ),
         }));
+
+        try {
+          await fetch('/api/subscriptions', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, deletedAt }),
+          });
+        } catch (e) {
+          console.warn('Could not soft-delete in cloud API:', e);
+        }
       },
 
-      restoreSubscription: (id: string) => {
+      restoreSubscription: async (id: string) => {
         set((state) => ({
           subscriptions: state.subscriptions.map((s) =>
             s.id === id ? { ...s, deletedAt: undefined } : s
           ),
         }));
+
+        try {
+          await fetch('/api/subscriptions', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, deletedAt: null }),
+          });
+        } catch (e) {
+          console.warn('Could not restore in cloud API:', e);
+        }
       },
 
       permanentlyDeleteSubscription: async (id: string) => {

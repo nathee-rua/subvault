@@ -1,5 +1,5 @@
 // ============================================
-// SubVault - Subscriptions API Route
+// SubVault - Subscriptions API Route (Full CRUD)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       provider_name: body.providerName,
       custom_provider_name: body.customProviderName,
       category: body.category || 'other',
-      plan_name: body.planName,
+      plan_name: body.planName || 'API Key / Sub',
       billing_cycle: body.billingCycle || 'monthly',
       amount: body.amount || 0,
       currency: body.currency || 'THB',
@@ -150,7 +150,70 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/subscriptions - Delete subscription from Supabase
+// PUT /api/subscriptions - Update subscription in Supabase (including soft-delete)
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Subscription ID is required' }, { status: 400 });
+    }
+
+    const isCloudConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder');
+    if (!isCloudConfigured) {
+      return NextResponse.json({ status: 'demo_mode', data: body });
+    }
+
+    const updateRow: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.providerName !== undefined) updateRow.provider_name = updates.providerName;
+    if (updates.customProviderName !== undefined) updateRow.custom_provider_name = updates.customProviderName;
+    if (updates.category !== undefined) updateRow.category = updates.category;
+    if (updates.planName !== undefined) updateRow.plan_name = updates.planName;
+    if (updates.billingCycle !== undefined) updateRow.billing_cycle = updates.billingCycle;
+    if (updates.amount !== undefined) updateRow.amount = updates.amount;
+    if (updates.currency !== undefined) updateRow.currency = updates.currency;
+    if (updates.startDate !== undefined) updateRow.start_date = updates.startDate;
+    if (updates.expiryDate !== undefined) updateRow.expiry_date = updates.expiryDate;
+    if (updates.autoRenew !== undefined) updateRow.auto_renew = updates.autoRenew;
+    if (updates.status !== undefined) updateRow.status = updates.status;
+    if (updates.deletedAt !== undefined) updateRow.deleted_at = updates.deletedAt;
+
+    // Encrypt sensitive credential fields if updated
+    if (keyHex) {
+      if (updates.account !== undefined) updateRow.account_encrypted = updates.account ? await encrypt(updates.account, keyHex) : null;
+      if (updates.password !== undefined) updateRow.password_encrypted = updates.password ? await encrypt(updates.password, keyHex) : null;
+      if (updates.notes !== undefined) updateRow.notes_encrypted = updates.notes ? await encrypt(updates.notes, keyHex) : null;
+      if (updates.supportContact !== undefined) updateRow.support_contact_encrypted = updates.supportContact ? await encrypt(updates.supportContact, keyHex) : null;
+    } else {
+      if (updates.account !== undefined) updateRow.account_encrypted = updates.account;
+      if (updates.password !== undefined) updateRow.password_encrypted = updates.password;
+      if (updates.notes !== undefined) updateRow.notes_encrypted = updates.notes;
+      if (updates.supportContact !== undefined) updateRow.support_contact_encrypted = updates.supportContact;
+    }
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update(updateRow)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase update error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ status: 'success', data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  }
+}
+
+// DELETE /api/subscriptions - Permanently delete subscription from Supabase
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
