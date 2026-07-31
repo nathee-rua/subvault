@@ -27,7 +27,7 @@ const navItems = [
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user, logout } = useStore();
+  const { isAuthenticated, user, logout, syncWithCloud } = useStore();
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,6 +42,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       router.push('/');
     }
   }, [isAuthenticated, router, mounted]);
+
+  // Real-time Cloud Synchronization & Polling
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      // Sync immediately on mount
+      syncWithCloud();
+
+      // Poll every 8 seconds for new entries (e.g. from Telegram)
+      const interval = setInterval(() => {
+        syncWithCloud();
+      }, 8000);
+
+      // Sync instantly when user switches back to the tab
+      const handleFocus = () => syncWithCloud();
+      window.addEventListener('focus', handleFocus);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('focus', handleFocus);
+      };
+    }
+  }, [mounted, isAuthenticated, syncWithCloud]);
 
   if (!mounted || !isAuthenticated) return null;
 
