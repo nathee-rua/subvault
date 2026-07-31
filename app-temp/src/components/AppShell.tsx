@@ -249,29 +249,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            borderRadius: 12,
-            color: 'var(--text-tertiary)',
-            fontSize: 13,
-          }}>
-            <Bell size={16} />
-            <span>Telegram Bot</span>
-            <span style={{
-              marginLeft: 'auto',
-              fontSize: 10,
-              padding: '2px 8px',
-              background: 'rgba(148,163,184,0.1)',
-              color: '#94a3b8',
-              borderRadius: 20,
-              border: '1px solid rgba(148,163,184,0.2)',
+          {process.env.NEXT_PUBLIC_TELEGRAM_CONFIGURED === 'true' ? (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 16px',
+              borderRadius: 12,
+              color: 'var(--text-tertiary)',
+              fontSize: 13,
             }}>
-              Not Set
-            </span>
-          </div>
+              <Bell size={16} style={{ color: '#00ff88' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Telegram Bot</span>
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                padding: '2px 8px',
+                background: 'rgba(0,255,136,0.1)',
+                color: '#00ff88',
+                borderRadius: 20,
+                border: '1px solid rgba(0,255,136,0.3)',
+                fontWeight: 600,
+              }}>
+                Active
+              </span>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 16px',
+              borderRadius: 12,
+              color: 'var(--text-tertiary)',
+              fontSize: 13,
+            }}>
+              <Bell size={16} />
+              <span>Telegram Bot</span>
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                padding: '2px 8px',
+                background: 'rgba(148,163,184,0.1)',
+                color: '#94a3b8',
+                borderRadius: 20,
+                border: '1px solid rgba(148,163,184,0.2)',
+              }}>
+                Not Set
+              </span>
+            </div>
+          )}
         </nav>
 
         {/* User Section */}
