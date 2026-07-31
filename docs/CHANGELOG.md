@@ -3,6 +3,14 @@
 All notable changes to SubVault will be documented in this file.
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-07-31
+### Deployment & Infrastructure
+- Created and deployed Supabase PostgreSQL 17 database instance (`SubVault` ref: `vnueckwzcovkzremoqzz`) in `ap-southeast-1`.
+- Executed full database schema migration ([`001_initial.sql`](file:///c:/AI%20antigravity/SubVault/app-temp/supabase/migrations/001_initial.sql)) including 10 tables, indexes, Row Level Security (RLS) policies, and auto-update triggers.
+- Created and pushed remote GitHub repository [https://github.com/nathee-rua/subvault](https://github.com/nathee-rua/subvault).
+- Deployed production Next.js application to Vercel at [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app) with configured environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `VAULT_ENCRYPTION_KEY`, `CRON_SECRET`).
+
 ### Testing
 - Integrated and verified Playwright v1.62 E2E browser acceptance testing suite (`tests/e2e/`), executing 22/22 tests across Chromium Desktop and Mobile viewports.
 - Added environment safety guard script (`scripts/assert-e2e-safe-env.mjs`) to prevent running destructive E2E tests against production environments.

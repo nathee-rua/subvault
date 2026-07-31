@@ -3,15 +3,18 @@
 ## Project Summary
 - **Name:** SubVault - Personal Subscription Tracker + Encrypted Credential Vault
 - **Purpose:** Sci-fi themed Next.js 15 web app for managing personal subscriptions and encrypted credential storage.
-- **Stack:** Next.js 15 (App Router), TypeScript, Glassmorphism Vanilla CSS, Zustand, Recharts, Lucide Icons, Framer Motion, AES-256-GCM, Supabase PostgreSQL, Vercel Cron, Gitleaks 8.30.1, Playwright 1.62.
+- **Stack:** Next.js 15 (App Router), TypeScript, Glassmorphism Vanilla CSS, Zustand, Recharts, Lucide Icons, Framer Motion, AES-256-GCM, Supabase PostgreSQL 17, Vercel Cron, Gitleaks 8.30.1, Playwright 1.62.
+- **Production URL:** [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app)
+- **GitHub Repository:** [https://github.com/nathee-rua/subvault](https://github.com/nathee-rua/subvault)
+- **Supabase Project:** SubVault (`vnueckwzcovkzremoqzz` in `ap-southeast-1`)
 
 ## Current State & Phase
-- **Current Phase:** Phase 9 - Playwright E2E Acceptance Testing & CI Pipeline Fully Verified
+- **Current Phase:** Phase 10 - Live Production Deployment Complete
 - **Branch:** master
-- **Clean Build & Test Status:** Gitleaks 8.30.1 verified working tree & history scan (0 leaks found), 8 unit tests passed, 0 boundary violations, clean `tsc --noEmit` typecheck, 22/22 Playwright E2E browser tests passed (desktop + mobile), clean `npx next build` production build (10 routes compiled).
+- **Status:** Supabase PostgreSQL 17 database created & migrated with RLS policies, Git repository connected & pushed to GitHub `nathee-rua/subvault`, Vercel production deployment active & healthy at [https://app-temp-pink.vercel.app](https://app-temp-pink.vercel.app).
 
 ## Automated Guardrail Commands
-- `npm run security:boundaries` - Static check for server-only secret references and NEXT_PUBLIC naming (`node app-temp/scripts/check-secret-boundaries.mjs`).
+- `npm run security:boundaries` - Static check for server-only secret references (`node app-temp/scripts/check-secret-boundaries.mjs`).
 - `npm run secrets:check` - Working tree secret leak scan using Gitleaks (`npx gitleaks dir . --config .gitleaks.toml --redact --exit-code 1 --no-banner`).
 - `npm run secrets:history` - Git commit history secret scan using Gitleaks (`npx gitleaks git . --config .gitleaks.toml --redact --exit-code 1 --no-banner`).
 - `npm run security:check` - Combined boundary and working tree check.
@@ -23,8 +26,5 @@
 - `npm run test` - Unit tests for encryption contracts and API payload masking.
 - `npm run build` - Full Next.js typecheck and production build.
 
-## Manual Pending Validations
-- `npm run db:test`: Requires local Docker and Supabase CLI installed (`supabase test db`). SQL structure verified statically in `supabase/tests/database/rls_verification.test.sql`.
-
-Last Updated: 2026-07-31 11:30 ICT
+Last Updated: 2026-07-31 14:02 ICT
 Last Updated By: Antigravity 2.0
