@@ -1,5 +1,5 @@
 // ============================================
-// SubVault - Calculation Utilities
+// SubVault - Calculation Utilities (Lifetime/Never Expiry Supported)
 // ============================================
 
 import { 
@@ -41,12 +41,16 @@ export function toAnnualAmount(amount: number, cycle: BillingCycle): number {
 }
 
 /**
- * Calculate days until a date from today
+ * Calculate days until a date from today (handles Lifetime / Never expiry)
  */
-export function daysUntil(dateStr: string): number {
+export function daysUntil(dateStr?: string | null): number {
+  if (!dateStr || dateStr === 'Never' || dateStr === 'Lifetime' || dateStr.startsWith('9999')) {
+    return 999999;
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(dateStr);
+  if (isNaN(target.getTime())) return 999999;
   target.setHours(0, 0, 0, 0);
   const diff = target.getTime() - today.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -83,11 +87,12 @@ export function getDashboardStats(subscriptions: Subscription[]): DashboardStats
 
   const upcoming = active.filter(s => {
     const days = daysUntil(s.expiryDate);
-    return days >= 0 && days <= 30;
+    return days >= 0 && days <= 30 && days < 9999;
   });
 
   const expired = subscriptions.filter(s => {
-    return s.status === 'active' && daysUntil(s.expiryDate) < 0;
+    const days = daysUntil(s.expiryDate);
+    return s.status === 'active' && days < 0;
   });
 
   return {
@@ -144,7 +149,7 @@ export function getCurrencyBreakdown(subscriptions: Subscription[]): CurrencyBre
 }
 
 /**
- * Get upcoming renewals sorted by closest first
+ * Get upcoming renewals sorted by closest first (excludes Lifetime)
  */
 export function getUpcomingRenewals(subscriptions: Subscription[], withinDays: number = 30): UpcomingRenewal[] {
   return subscriptions
@@ -153,7 +158,7 @@ export function getUpcomingRenewals(subscriptions: Subscription[], withinDays: n
       subscription: s,
       daysLeft: daysUntil(s.expiryDate),
     }))
-    .filter(r => r.daysLeft >= 0 && r.daysLeft <= withinDays)
+    .filter(r => r.daysLeft >= 0 && r.daysLeft <= withinDays && r.daysLeft < 9999)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
@@ -176,7 +181,7 @@ export function getAutoRenewRisks(subscriptions: Subscription[]): UpcomingRenewa
       subscription: s,
       daysLeft: daysUntil(s.expiryDate),
     }))
-    .filter(r => r.daysLeft >= 0 && r.daysLeft <= 14)
+    .filter(r => r.daysLeft >= 0 && r.daysLeft <= 14 && r.daysLeft < 9999)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
@@ -184,7 +189,9 @@ export function getAutoRenewRisks(subscriptions: Subscription[]): UpcomingRenewa
  * Calculate next renewal date based on billing cycle
  */
 export function calculateNextRenewalDate(currentDate: string, cycle: BillingCycle): string {
+  if (currentDate.startsWith('9999') || currentDate === 'Never') return '9999-12-31';
   const date = new Date(currentDate);
+  if (isNaN(date.getTime())) return '9999-12-31';
   switch (cycle) {
     case 'monthly':
       date.setMonth(date.getMonth() + 1);
@@ -221,7 +228,7 @@ export function getMonthlySpendingData(subscriptions: Subscription[]): { month: 
       if (s.deletedAt) return false;
       const start = s.startDate ? new Date(s.startDate) : new Date(s.createdAt);
       const expiry = new Date(s.expiryDate);
-      return start <= d && (expiry >= d || s.autoRenew);
+      return start <= d && (expiry >= d || s.autoRenew || s.expiryDate?.startsWith('9999'));
     });
 
     const monthlyTotal = active.reduce((sum, s) => sum + toMonthlyAmount(s.amount, s.billingCycle), 0);
@@ -234,8 +241,12 @@ export function getMonthlySpendingData(subscriptions: Subscription[]): { month: 
 /**
  * Format date string to human readable
  */
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr?: string | null): string {
+  if (!dateStr || dateStr === 'Never' || dateStr === 'Lifetime' || dateStr.startsWith('9999')) {
+    return 'Never (Lifetime)';
+  }
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Never (Lifetime)';
   return date.toLocaleDateString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -247,6 +258,7 @@ export function formatDate(dateStr: string): string {
  * Get urgency label for days left
  */
 export function getUrgencyLabel(daysLeft: number): { text: string; color: string; icon: string } {
+  if (daysLeft >= 9999) return { text: '♾️ Lifetime', color: '#00ff88', icon: '♾️' };
   if (daysLeft < 0) return { text: 'Expired', color: '#ef4444', icon: '🔴' };
   if (daysLeft === 0) return { text: 'Today', color: '#ef4444', icon: '🔴' };
   if (daysLeft <= 3) return { text: `${daysLeft}d left`, color: '#f59e0b', icon: '⚠️' };

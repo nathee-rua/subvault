@@ -1,5 +1,5 @@
 // ============================================
-// SubVault - Telegram Webhook Handler (Comprehensive B.E./C.E. Date Parser)
+// SubVault - Telegram Webhook Handler (Dual-Layer AI Classifier Engine)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,6 +18,7 @@ interface ParsedEntry {
   expiryDate: string;
   category: string;
   notes?: string;
+  isLifetime?: boolean;
 }
 
 const THAI_MONTH_MAP: Record<string, string> = {
@@ -40,19 +41,15 @@ const THAI_MONTH_MAP: Record<string, string> = {
  */
 function normalizeYearToCE(yearNum: number): number {
   if (yearNum > 2400) {
-    // 4-digit B.E. year (e.g. 2569 -> 2026)
     return yearNum - 543;
   }
   if (yearNum >= 2000 && yearNum <= 2100) {
-    // 4-digit C.E. year (e.g. 2026)
     return yearNum;
   }
   if (yearNum >= 60 && yearNum <= 99) {
-    // 2-digit B.E. year (e.g. 69 -> 2569 - 543 = 2026)
     return (2500 + yearNum) - 543;
   }
   if (yearNum >= 20 && yearNum <= 59) {
-    // 2-digit C.E./B.E. year (e.g. 26 -> 2026)
     return 2000 + yearNum;
   }
   return yearNum;
@@ -60,12 +57,11 @@ function normalizeYearToCE(yearNum: number): number {
 
 /**
  * Parse any B.E. or C.E. date format into ISO YYYY-MM-DD
- * Handles 24.9.26, 24/9/2569, 24-09-2026, 24 ก.ย. 2569, 2026-09-24
  */
 function parseAnyDateToCE(text: string): string | null {
   const clean = text.trim();
 
-  // Pattern 1: ISO YYYY-MM-DD or YYYY.MM.DD
+  // ISO YYYY-MM-DD
   const isoMatch = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   if (isoMatch) {
     const y = normalizeYearToCE(parseInt(isoMatch[1], 10));
@@ -74,7 +70,7 @@ function parseAnyDateToCE(text: string): string | null {
     return `${y}-${m}-${d}`;
   }
 
-  // Pattern 2: DD.MM.YY or DD/MM/YY or DD-MM-YY (e.g. 24.9.26, 24/9/2569)
+  // DD.MM.YY or DD/MM/YY or DD-MM-YY
   const dmyMatch = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
   if (dmyMatch) {
     const d = String(parseInt(dmyMatch[1], 10)).padStart(2, '0');
@@ -83,7 +79,7 @@ function parseAnyDateToCE(text: string): string | null {
     return `${y}-${m}-${d}`;
   }
 
-  // Pattern 3: Thai/English named months (e.g. 24 ก.ย. 2569, 24 Sep 2026)
+  // Thai/English named months
   const textMonthMatch = clean.match(/^(\d{1,2})\s+([ก-ฮa-zA-Z\.]+)\s+(\d{2,4})$/);
   if (textMonthMatch) {
     const d = String(parseInt(textMonthMatch[1], 10)).padStart(2, '0');
@@ -99,7 +95,7 @@ function parseAnyDateToCE(text: string): string | null {
 }
 
 /**
- * Smart Text Parser for Telegram messages
+ * Intelligent Classifier Engine for Telegram Messages
  */
 function parseTelegramText(rawText: string): ParsedEntry {
   const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
@@ -109,8 +105,17 @@ function parseTelegramText(rawText: string): ParsedEntry {
   let password = '';
   let expiryDate = '';
   let notes = '';
+  let isLifetime = false;
 
-  // 1. Provider Name: First line clean up (remove trailing commas, colons)
+  // 1. Lifetime / Never Expire Keyword Check in full text
+  const lowerFullText = rawText.toLowerCase();
+  const lifetimeKeywords = ['not expire', 'never expire', 'no expiry', 'no expire', 'ไม่มีวันหมดอายุ', 'ไม่หมดอายุ', 'lifetime', 'never', 'forever', 'infinity', 'อนันต์'];
+  if (lifetimeKeywords.some(kw => lowerFullText.includes(kw))) {
+    isLifetime = true;
+    expiryDate = '9999-12-31';
+  }
+
+  // 2. Provider Name (First Line)
   if (lines.length > 0) {
     providerName = lines[0].replace(/[,:]+$/, '').trim();
   }
@@ -118,9 +123,16 @@ function parseTelegramText(rawText: string): ParsedEntry {
   const accountRegex = /^(?:acc|account|email|user|username)\s*:\s*(.+)$/i;
   const passwordRegex = /^(?:pass|password|key|pw|secret)\s*:\s*(.+)$/i;
   const expiryLabelRegex = /^(?:หมดอายุ|expiry|expired|exp|due|renew|renewal)\s*:?\s*(.*)$/i;
+  const apiKeyPrefixRegex = /^(?:AQ\.|sk-|xai-|ghp_|eyJ|AIza)[a-zA-Z0-9._\-]+$/;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
+    const lowerLine = line.toLowerCase();
+
+    // Skip line if it's purely a lifetime keyword phrase
+    if (lifetimeKeywords.some(kw => lowerLine === kw || lowerLine.startsWith(kw))) {
+      continue;
+    }
 
     // Check Account
     const accMatch = line.match(accountRegex);
@@ -136,34 +148,36 @@ function parseTelegramText(rawText: string): ParsedEntry {
       continue;
     }
 
-    // Check Expiry Date Label or multi-line Expiry Line (e.g. Expired \n 24.9.26)
-    const expLabelMatch = line.match(expiryLabelRegex);
-    if (expLabelMatch) {
-      const inlineDateText = expLabelMatch[1].trim();
-      if (inlineDateText) {
-        const parsedDate = parseAnyDateToCE(inlineDateText);
-        if (parsedDate) {
-          expiryDate = parsedDate;
-          continue;
+    // Check Expiry Date Label
+    if (!isLifetime) {
+      const expLabelMatch = line.match(expiryLabelRegex);
+      if (expLabelMatch) {
+        const inlineDateText = expLabelMatch[1].trim();
+        if (inlineDateText) {
+          const parsedDate = parseAnyDateToCE(inlineDateText);
+          if (parsedDate) {
+            expiryDate = parsedDate;
+            continue;
+          }
+        }
+        // Check next line
+        if (i + 1 < lines.length) {
+          const nextLineDate = parseAnyDateToCE(lines[i + 1]);
+          if (nextLineDate) {
+            expiryDate = nextLineDate;
+            i++;
+            continue;
+          }
         }
       }
-      // Check if date is on the very next line
-      if (i + 1 < lines.length) {
-        const nextLineDate = parseAnyDateToCE(lines[i + 1]);
-        if (nextLineDate) {
-          expiryDate = nextLineDate;
-          i++; // skip next line
-          continue;
-        }
-      }
-    }
 
-    // Check standalone date on line (e.g. 24.9.26 or 24/9/2569)
-    if (!expiryDate) {
-      const standaloneDate = parseAnyDateToCE(line);
-      if (standaloneDate) {
-        expiryDate = standaloneDate;
-        continue;
+      // Check standalone date
+      if (!expiryDate) {
+        const standaloneDate = parseAnyDateToCE(line);
+        if (standaloneDate) {
+          expiryDate = standaloneDate;
+          continue;
+        }
       }
     }
 
@@ -173,13 +187,19 @@ function parseTelegramText(rawText: string): ParsedEntry {
       continue;
     }
 
-    // Check standalone API Key pattern (e.g. sk-..., xai-..., AQ...)
-    if (!password && line.match(/^(?:sk-|xai-|AQ|ghp_|eyJ)[a-zA-Z0-9._\-]+$/)) {
+    // Check High-Priority API Key pattern (e.g. AQ.Ab..., sk-..., xai-..., long token)
+    if (!password && (apiKeyPrefixRegex.test(line) || (line.length >= 24 && !line.includes(' ')))) {
       password = line.trim();
       continue;
     }
 
-    // Fallback: append line to notes or password
+    // Check Descriptive Note / App Name line (e.g. "name web app,")
+    if (line.includes(',') || line.includes('name') || line.includes('app') || line.includes('sub')) {
+      notes += (notes ? '\n' : '') + line.replace(/[,:]+$/, '').trim();
+      continue;
+    }
+
+    // Fallback: assign to password if empty, else to notes
     if (!password) {
       password = line;
     } else {
@@ -187,20 +207,22 @@ function parseTelegramText(rawText: string): ParsedEntry {
     }
   }
 
-  // Fallback default expiry date if none detected: 30 days from now
-  if (!expiryDate) {
+  // Default expiry date if non-lifetime and none detected
+  if (!expiryDate && !isLifetime) {
     expiryDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
   }
 
-  // Auto-detect category
+  // Category & Provider Name AI Intelligence
   let category = 'other';
   const lowerName = providerName.toLowerCase();
-  if (lowerName.includes('ai') || lowerName.includes('grok') || lowerName.includes('gpt') || lowerName.includes('claude') || lowerName.includes('openai')) {
+  if (lowerName.includes('ai') || lowerName.includes('grok') || lowerName.includes('gpt') || lowerName.includes('claude') || lowerName.includes('openai') || lowerName.includes('google')) {
     category = 'ai';
   } else if (lowerName.includes('vpn') || lowerName.includes('proton')) {
     category = 'vpn';
   } else if (lowerName.includes('netfl') || lowerName.includes('tube') || lowerName.includes('spotify')) {
     category = 'streaming';
+  } else if (lowerName.includes('cloud') || lowerName.includes('aws') || lowerName.includes('azure')) {
+    category = 'cloud';
   }
 
   return {
@@ -210,6 +232,7 @@ function parseTelegramText(rawText: string): ParsedEntry {
     expiryDate,
     category,
     notes: notes || undefined,
+    isLifetime,
   };
 }
 
@@ -311,6 +334,7 @@ export async function POST(request: NextRequest) {
         const password = parsed.password || null;
         const notes = parsed.notes || null;
         const expiryDate = parsed.expiryDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        const isLifetime = expiryDate.startsWith('9999') || parsed.isLifetime;
 
         // Encrypt credentials if key is configured
         let account_encrypted = account;
@@ -333,7 +357,7 @@ export async function POST(request: NextRequest) {
           amount: 0,
           currency: 'USD',
           expiry_date: expiryDate,
-          auto_renew: true,
+          auto_renew: !isLifetime,
           status: 'active',
           account_encrypted,
           password_encrypted,
@@ -364,7 +388,8 @@ export async function POST(request: NextRequest) {
           `<b>Category:</b> ${category.toUpperCase()}\n` +
           `<b>Account:</b> ${account ? account : '<i>None</i>'}\n` +
           `<b>Password/Key:</b> ${password ? '🔒 Encrypted (AES-256)' : '<i>None</i>'}\n` +
-          `<b>Next Renewal:</b> ${expiryDate}\n\n` +
+          `<b>Next Renewal:</b> ${isLifetime ? '♾️ Never / Lifetime (No Expiry)' : expiryDate}\n` +
+          (notes ? `<b>Notes:</b> ${notes}\n` : '') + `\n` +
           `🔗 View in Vault: <a href="https://travelbozvault.vercel.app/vault">travelbozvault.vercel.app/vault</a>`
         );
 
@@ -400,7 +425,7 @@ export async function POST(request: NextRequest) {
     if (rawText.startsWith('/start')) {
       await sendTelegramMessage(
         chatId,
-        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription text directly to this chat!\n\n<b>Example:</b>\n<code>PROTRon VPN 2mo\npyeproton604@proton.me\nAhsg836#Hsgdjej2\nExpired\n24.9.26</code>`
+        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription text directly to this chat!\n\n<b>Example:</b>\n<code>google API Keys\nname web app,\nAQ.Ab8RN6JlXfOFwRIlyONz_fUgLBxL2XFWvQfE0mxekfpe6kRV0Q\nnot expire</code>`
       );
       return NextResponse.json({ ok: true });
     }
@@ -464,8 +489,9 @@ export async function POST(request: NextRequest) {
       `<b>Provider:</b> ${parsed.providerName}\n` +
       `<b>Category:</b> ${parsed.category.toUpperCase()}\n` +
       `<b>Account:</b> ${parsed.account ? parsed.account : '<i>None</i>'}\n` +
-      `<b>Password/Key:</b> ${parsed.password ? '🔒 Detected' : '<i>None</i>'}\n` +
-      `<b>Next Renewal:</b> ${parsed.expiryDate}\n\n` +
+      `<b>Password/Key:</b> ${parsed.password ? '🔒 Detected API Key' : '<i>None</i>'}\n` +
+      `<b>Next Renewal:</b> ${parsed.isLifetime || parsed.expiryDate.startsWith('9999') ? '♾️ Never / Lifetime (No Expiry)' : parsed.expiryDate}\n` +
+      (parsed.notes ? `<b>Notes:</b> ${parsed.notes}\n` : '') + `\n` +
       `<i>Tap Confirm below to save into your SubVault Cloud Database.</i>`,
       confirmationMarkup
     );
