@@ -1,5 +1,5 @@
 // ============================================
-// SubVault - Telegram Webhook Handler (Interactive & Real-time)
+// SubVault - Telegram Webhook Handler (Smart AI & BE Year Parser)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,6 +10,141 @@ export const runtime = 'nodejs';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8728086041:AAEzG4fGumZcTvxW-SI9QwAU5RAdFBbtI6A';
 const VAULT_ENCRYPTION_KEY = process.env.VAULT_ENCRYPTION_KEY;
+
+interface ParsedEntry {
+  providerName: string;
+  account?: string;
+  password?: string;
+  expiryDate: string;
+  category: string;
+  notes?: string;
+}
+
+/**
+ * Smart Text Parser for Telegram messages
+ * Handles Thai BE Year (e.g. 2569 -> 2026), Acc/Email separation, Pass/Key separation
+ */
+function parseTelegramText(rawText: string): ParsedEntry {
+  const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
+  
+  let providerName = '';
+  let account = '';
+  let password = '';
+  let expiryDate = '';
+  let notes = '';
+
+  // 1. Provider Name: First line clean up (remove trailing commas, colons)
+  if (lines.length > 0) {
+    providerName = lines[0].replace(/[,:]+$/, '').trim();
+  }
+
+  const accountRegex = /^(?:acc|account|email|user|username)\s*:\s*(.+)$/i;
+  const passwordRegex = /^(?:pass|password|key|pw|secret)\s*:\s*(.+)$/i;
+  const expiryRegex = /(?:หมดอายุ|expiry|exp|due|renew|renewal)\s*:\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
+  const isoDateRegex = /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/;
+  const dmyDateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check Expiry Date in line
+    const expMatch = line.match(expiryRegex);
+    if (expMatch) {
+      let day = parseInt(expMatch[1], 10);
+      let month = parseInt(expMatch[2], 10);
+      let year = parseInt(expMatch[3], 10);
+
+      // Convert BE year to AD year if year > 2400
+      if (year > 2400) {
+        year = year - 543;
+      } else if (year < 100) {
+        year = 2000 + year;
+      }
+
+      const mm = String(month).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      expiryDate = `${year}-${mm}-${dd}`;
+      continue;
+    }
+
+    // Check Account
+    const accMatch = line.match(accountRegex);
+    if (accMatch) {
+      account = accMatch[1].trim();
+      continue;
+    }
+
+    // Check Password / Key
+    const passMatch = line.match(passwordRegex);
+    if (passMatch) {
+      password = passMatch[1].trim();
+      continue;
+    }
+
+    // Check standalone email pattern
+    if (!account && line.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+      account = line.trim();
+      continue;
+    }
+
+    // Check standalone API Key pattern (e.g. sk-..., xai-..., AQ...)
+    if (!password && line.match(/^(?:sk-|xai-|AQ|ghp_|eyJ)[a-zA-Z0-9._\-]+$/)) {
+      password = line.trim();
+      continue;
+    }
+
+    // Check standalone date DD/MM/YYYY or YYYY-MM-DD
+    if (!expiryDate) {
+      const isoMatch = line.match(isoDateRegex);
+      if (isoMatch) {
+        expiryDate = `${isoMatch[1]}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
+        continue;
+      }
+      const dmyMatch = line.match(dmyDateRegex);
+      if (dmyMatch) {
+        let day = parseInt(dmyMatch[1], 10);
+        let month = parseInt(dmyMatch[2], 10);
+        let year = parseInt(dmyMatch[3], 10);
+        if (year > 2400) year -= 543;
+        else if (year < 100) year += 2000;
+        expiryDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        continue;
+      }
+    }
+
+    // Fallback: append line to notes or password
+    if (!password) {
+      password = line;
+    } else {
+      notes += (notes ? '\n' : '') + line;
+    }
+  }
+
+  // Fallback default expiry date if none detected: 30 days from now
+  if (!expiryDate) {
+    expiryDate = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  }
+
+  // Auto-detect category
+  let category = 'other';
+  const lowerName = providerName.toLowerCase();
+  if (lowerName.includes('ai') || lowerName.includes('grok') || lowerName.includes('gpt') || lowerName.includes('claude') || lowerName.includes('openai')) {
+    category = 'ai';
+  } else if (lowerName.includes('vpn')) {
+    category = 'vpn';
+  } else if (lowerName.includes('netfl') || lowerName.includes('tube') || lowerName.includes('spotify')) {
+    category = 'streaming';
+  }
+
+  return {
+    providerName: providerName || 'Custom Service',
+    account: account || undefined,
+    password: password || undefined,
+    expiryDate,
+    category,
+    notes: notes || undefined,
+  };
+}
 
 // Helper to send message with inline keyboard
 async function sendTelegramMessage(chatId: number | string, text: string, replyMarkup?: any) {
@@ -105,17 +240,20 @@ export async function POST(request: NextRequest) {
         const parsed = draft.parsed_data || {};
         const providerName = parsed.providerName || 'Custom Service';
         const category = parsed.category || 'other';
-        const credentialKey = parsed.credentialKey || '';
-        const defaultExpiry = parsed.expiryDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        const account = parsed.account || null;
+        const password = parsed.password || null;
+        const notes = parsed.notes || null;
+        const expiryDate = parsed.expiryDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
-        // Encrypt password/key if key is configured
-        let password_encrypted = credentialKey;
-        if (VAULT_ENCRYPTION_KEY && credentialKey) {
-          try {
-            password_encrypted = await encrypt(credentialKey, VAULT_ENCRYPTION_KEY);
-          } catch (e) {
-            console.error('Encryption failed:', e);
-          }
+        // Encrypt credentials if key is configured
+        let account_encrypted = account;
+        let password_encrypted = password;
+        let notes_encrypted = notes;
+
+        if (VAULT_ENCRYPTION_KEY) {
+          if (account) { try { account_encrypted = await encrypt(account, VAULT_ENCRYPTION_KEY); } catch {} }
+          if (password) { try { password_encrypted = await encrypt(password, VAULT_ENCRYPTION_KEY); } catch {} }
+          if (notes) { try { notes_encrypted = await encrypt(notes, VAULT_ENCRYPTION_KEY); } catch {} }
         }
 
         // Insert into subscriptions table
@@ -127,10 +265,12 @@ export async function POST(request: NextRequest) {
           billing_cycle: 'monthly',
           amount: 0,
           currency: 'USD',
-          expiry_date: defaultExpiry,
+          expiry_date: expiryDate,
           auto_renew: true,
           status: 'active',
-          password_encrypted: credentialKey ? password_encrypted : null,
+          account_encrypted,
+          password_encrypted,
+          notes_encrypted,
           source: 'telegram_text',
         };
 
@@ -155,8 +295,9 @@ export async function POST(request: NextRequest) {
           `✅ <b>Saved to SubVault!</b>\n\n` +
           `<b>Provider:</b> ${providerName}\n` +
           `<b>Category:</b> ${category.toUpperCase()}\n` +
-          `<b>Encrypted Key:</b> ${credentialKey ? '🔒 Saved & Encrypted (AES-256)' : 'None'}\n` +
-          `<b>Next Renewal:</b> ${defaultExpiry}\n\n` +
+          `<b>Account:</b> ${account ? account : '<i>None</i>'}\n` +
+          `<b>Password/Key:</b> ${password ? '🔒 Encrypted (AES-256)' : '<i>None</i>'}\n` +
+          `<b>Next Renewal:</b> ${expiryDate}\n\n` +
           `🔗 View in Vault: <a href="https://travelbozvault.vercel.app/vault">travelbozvault.vercel.app/vault</a>`
         );
 
@@ -192,7 +333,7 @@ export async function POST(request: NextRequest) {
     if (rawText.startsWith('/start')) {
       await sendTelegramMessage(
         chatId,
-        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription name or API Key text directly to this chat!\n\n<b>Example:</b>\n<code>Grok xAI\nxai-CjQu...</code>`
+        `🤖 <b>Welcome to SubVault Bot!</b>\n\nYour bot is connected to <b>SubVault Cloud Vault</b>.\n\n<b>How to add items:</b>\nSimply send any subscription text directly to this chat!\n\n<b>Example:</b>\n<code>Super Grok\nAcc: user@outlook.com\npass: MonicaMercedes37\nหมดอายุ : 10/9/2569</code>`
       );
       return NextResponse.json({ ok: true });
     }
@@ -215,34 +356,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // 4. Parse subscription entry text and create interactive confirmation draft
-    const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
-    const providerName = lines[0] || 'Custom Service';
-    const credentialKey = lines.length > 1 ? lines.slice(1).join('\n') : '';
-
-    // Auto-detect category
-    let category = 'other';
-    const lowerName = providerName.toLowerCase();
-    if (lowerName.includes('ai') || lowerName.includes('grok') || lowerName.includes('gpt') || lowerName.includes('claude') || lowerName.includes('openai')) {
-      category = 'ai';
-    } else if (lowerName.includes('vpn')) {
-      category = 'vpn';
-    } else if (lowerName.includes('netfl') || lowerName.includes('tube') || lowerName.includes('spotify')) {
-      category = 'streaming';
-    }
-
-    const defaultExpiry = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    // 4. Smart parsing of subscription entry text
+    const parsed = parseTelegramText(rawText);
 
     // Save draft into telegram_import_drafts
     const draftPayload = {
       telegram_message_id: String(message.message_id),
       raw_input: rawText,
-      parsed_data: {
-        providerName,
-        category,
-        credentialKey,
-        expiryDate: defaultExpiry,
-      },
+      parsed_data: parsed,
       status: 'pending',
     };
 
@@ -273,10 +394,11 @@ export async function POST(request: NextRequest) {
     await sendTelegramMessage(
       chatId,
       `📋 <b>Confirm Subscription Entry</b>\n\n` +
-      `<b>Provider:</b> ${providerName}\n` +
-      `<b>Category:</b> ${category.toUpperCase()}\n` +
-      `<b>Credential Key:</b> ${credentialKey ? '🔒 Password/Key detected' : 'None'}\n` +
-      `<b>Next Renewal:</b> ${defaultExpiry}\n\n` +
+      `<b>Provider:</b> ${parsed.providerName}\n` +
+      `<b>Category:</b> ${parsed.category.toUpperCase()}\n` +
+      `<b>Account:</b> ${parsed.account ? parsed.account : '<i>None</i>'}\n` +
+      `<b>Password/Key:</b> ${parsed.password ? '🔒 Detected' : '<i>None</i>'}\n` +
+      `<b>Next Renewal:</b> ${parsed.expiryDate}\n\n` +
       `<i>Tap Confirm below to save into your SubVault Cloud Database.</i>`,
       confirmationMarkup
     );
