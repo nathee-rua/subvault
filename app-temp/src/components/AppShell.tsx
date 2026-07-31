@@ -198,29 +198,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             System
           </div>
           
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            borderRadius: 12,
-            color: 'var(--text-tertiary)',
-            fontSize: 13,
-          }}>
-            <Database size={16} />
-            <span>Local Storage</span>
-            <span style={{
-              marginLeft: 'auto',
-              fontSize: 10,
-              padding: '2px 8px',
-              background: 'rgba(0,255,136,0.1)',
-              color: '#00ff88',
-              borderRadius: 20,
-              border: '1px solid rgba(0,255,136,0.2)',
+          {process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') ? (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 16px',
+              borderRadius: 12,
+              color: 'var(--text-tertiary)',
+              fontSize: 13,
             }}>
-              Active
-            </span>
-          </div>
+              <Database size={16} style={{ color: '#00f0ff' }} />
+              <span style={{ color: 'var(--text-secondary)' }}>Supabase DB</span>
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                padding: '2px 8px',
+                background: 'rgba(0,240,255,0.1)',
+                color: '#00f0ff',
+                borderRadius: 20,
+                border: '1px solid rgba(0,240,255,0.3)',
+                fontWeight: 600,
+              }}>
+                Cloud Active
+              </span>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 16px',
+              borderRadius: 12,
+              color: 'var(--text-tertiary)',
+              fontSize: 13,
+            }}>
+              <Database size={16} />
+              <span>Local Storage</span>
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: 10,
+                padding: '2px 8px',
+                background: 'rgba(0,255,136,0.1)',
+                color: '#00ff88',
+                borderRadius: 20,
+                border: '1px solid rgba(0,255,136,0.2)',
+              }}>
+                Active
+              </span>
+            </div>
+          )}
 
           <div style={{
             display: 'flex',
