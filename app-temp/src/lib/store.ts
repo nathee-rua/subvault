@@ -230,6 +230,7 @@ interface StoreState {
   // Actions
   login: (username: string, password: string) => boolean;
   logout: () => void;
+  syncWithCloud: () => Promise<void>;
   
   addSubscription: (data: SubscriptionFormData) => void;
   updateSubscription: (id: string, data: Partial<Subscription>) => void;
@@ -281,6 +282,9 @@ export const useStore = create<StoreState>()(
           if (!get().hasInitialized) {
             set({ subscriptions: DEMO_SUBSCRIPTIONS, hasInitialized: true });
           }
+          
+          // Trigger cloud sync asynchronously
+          get().syncWithCloud();
           return true;
         }
         return false;
@@ -290,8 +294,21 @@ export const useStore = create<StoreState>()(
         set({ isAuthenticated: false, user: null });
       },
 
+      syncWithCloud: async () => {
+        try {
+          const res = await fetch('/api/subscriptions');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.status === 'success' && Array.isArray(data.subscriptions) && data.subscriptions.length > 0) {
+            set({ subscriptions: data.subscriptions, hasInitialized: true });
+          }
+        } catch (e) {
+          console.warn('Sync with cloud skipped or offline:', e);
+        }
+      },
+
       // Subscriptions
-      addSubscription: (data: SubscriptionFormData) => {
+      addSubscription: async (data: SubscriptionFormData) => {
         const now = new Date().toISOString();
         const newSub: Subscription = {
           id: generateId(),
@@ -319,7 +336,18 @@ export const useStore = create<StoreState>()(
         };
         set((state) => ({
           subscriptions: [...state.subscriptions, newSub],
+          hasInitialized: true,
         }));
+
+        try {
+          await fetch('/api/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSub),
+          });
+        } catch (e) {
+          console.warn('Could not post to cloud API:', e);
+        }
       },
 
       updateSubscription: (id: string, data: Partial<Subscription>) => {
@@ -346,10 +374,18 @@ export const useStore = create<StoreState>()(
         }));
       },
 
-      permanentlyDeleteSubscription: (id: string) => {
+      permanentlyDeleteSubscription: async (id: string) => {
         set((state) => ({
           subscriptions: state.subscriptions.filter((s) => s.id !== id),
         }));
+
+        try {
+          await fetch(`/api/subscriptions?id=${id}`, {
+            method: 'DELETE',
+          });
+        } catch (e) {
+          console.warn('Could not delete from cloud API:', e);
+        }
       },
 
       // Custom Providers
