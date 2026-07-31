@@ -10,7 +10,7 @@ import {
 import { useState, useCallback } from 'react';
 
 export default function SettingsPage() {
-  const { user, reminderPreferences, updateReminderPreferences, clearAllData, loadDemoData, subscriptions } = useStore();
+  const { user, reminderPreferences, updateReminderPreferences, clearAllData, subscriptions } = useStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'data'>('profile');
   const [saved, setSaved] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -466,15 +466,6 @@ export default function SettingsPage() {
                 {subscriptions.length}
               </span>
             </div>
-
-            <button
-              className="btn-secondary"
-              onClick={loadDemoData}
-              style={{ width: '100%', marginBottom: 12 }}
-            >
-              <RefreshCw size={16} />
-              Reload Demo Data
-            </button>
 
             {showClearConfirm ? (
               <div style={{
