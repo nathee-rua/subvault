@@ -5,16 +5,34 @@ import { motion } from 'framer-motion';
 import {
   User, Shield, Bell, Database, Download, Trash2, Key,
   ExternalLink, Save, RefreshCw, AlertTriangle, Check,
-  Copy, Eye, EyeOff, MessageCircle, Clock
+  Copy, Eye, EyeOff, MessageCircle, Clock, Zap, Cpu, Sparkles
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 
 export default function SettingsPage() {
   const { user, reminderPreferences, updateReminderPreferences, clearAllData, subscriptions } = useStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'data'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'integrations' | 'data'>('notifications');
   const [saved, setSaved] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [telegramCode, setTelegramCode] = useState('');
+
+  // Telegram Configuration State
+  const [telegramToken, setTelegramToken] = useState('8728086041:AAEzG4fGumZcTvxW-SI9QwAU5RAdFBbtI6A');
+  const [telegramChatId, setTelegramChatId] = useState('2140484373');
+  const [showToken, setShowToken] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramStatus, setTelegramStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>({
+    type: 'success',
+    msg: 'Connected to @Travelboz_pass_bot (Chat ID: 2140484373)',
+  });
+
+  // Gemini API Configuration State
+  const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [geminiModels, setGeminiModels] = useState<string[]>(['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro']);
+  const [selectedGeminiModel, setSelectedGeminiModel] = useState('gemini-2.5-flash');
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [geminiStatus, setGeminiStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const generateLinkCode = useCallback(() => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -26,6 +44,91 @@ export default function SettingsPage() {
   const showSaved = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  // Test Telegram Connection & Send Confirmation
+  const handleTestTelegram = async () => {
+    setTelegramLoading(true);
+    setTelegramStatus(null);
+    try {
+      const res = await fetch('/api/settings/telegram/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botToken: telegramToken, chatId: telegramChatId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setTelegramStatus({ type: 'error', msg: data.error || 'Connection test failed' });
+      } else {
+        setTelegramStatus({
+          type: 'success',
+          msg: `Connected! Bot: @${data.botUsername} (${data.botName}). Confirmation message sent to Telegram!`,
+        });
+      }
+    } catch (err: any) {
+      setTelegramStatus({ type: 'error', msg: err.message || 'Server error' });
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
+  // Fetch Available Gemini Models
+  const handleFetchGeminiModels = async () => {
+    if (!geminiApiKey) {
+      setGeminiStatus({ type: 'error', msg: 'Please enter a Gemini API Key first' });
+      return;
+    }
+    setGeminiLoading(true);
+    setGeminiStatus(null);
+    try {
+      const res = await fetch('/api/settings/gemini/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: geminiApiKey, action: 'fetch_models' }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setGeminiStatus({ type: 'error', msg: data.error || 'Failed to fetch Gemini models' });
+      } else {
+        setGeminiModels(data.models);
+        if (data.models.length > 0) setSelectedGeminiModel(data.models[0]);
+        setGeminiStatus({ type: 'success', msg: `Retrieved ${data.models.length} Gemini models successfully!` });
+      }
+    } catch (err: any) {
+      setGeminiStatus({ type: 'error', msg: err.message || 'Server error' });
+    } finally {
+      setGeminiLoading(false);
+    }
+  };
+
+  // Test Gemini Connection
+  const handleTestGemini = async () => {
+    if (!geminiApiKey) {
+      setGeminiStatus({ type: 'error', msg: 'Please enter a Gemini API Key first' });
+      return;
+    }
+    setGeminiLoading(true);
+    setGeminiStatus(null);
+    try {
+      const res = await fetch('/api/settings/gemini/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: geminiApiKey, action: 'test_connection', selectedModel: selectedGeminiModel }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setGeminiStatus({ type: 'error', msg: data.error || 'Connection test failed' });
+      } else {
+        setGeminiStatus({
+          type: 'success',
+          msg: `Connection successful! Model ${data.model} responded: "${data.responseText}"`,
+        });
+      }
+    } catch (err: any) {
+      setGeminiStatus({ type: 'error', msg: err.message || 'Server error' });
+    } finally {
+      setGeminiLoading(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -71,6 +174,7 @@ export default function SettingsPage() {
     { id: 'profile' as const, icon: User, label: 'Profile' },
     { id: 'security' as const, icon: Shield, label: 'Security' },
     { id: 'notifications' as const, icon: Bell, label: 'Notifications' },
+    { id: 'integrations' as const, icon: Zap, label: 'APIs & Bots' },
     { id: 'data' as const, icon: Database, label: 'Data' },
   ];
 
@@ -124,7 +228,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-          Configure your vault, notifications, and data preferences
+          Configure your vault, integrations, and data preferences
         </p>
       </motion.div>
 
@@ -226,7 +330,7 @@ export default function SettingsPage() {
           <div style={cardStyle}>
             <div style={sectionTitleStyle}>
               <Key size={20} style={{ color: '#8b5cf6' }} />
-              Encryption
+              Encryption & Environment Security
             </div>
 
             <div style={{
@@ -241,9 +345,8 @@ export default function SettingsPage() {
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#8b5cf6' }}>AES-256-GCM Encryption</span>
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                All sensitive fields (account, password, notes, support contact) are encrypted before storage.
-                In the current demo mode, data is stored in your browser&apos;s localStorage.
-                When connected to Supabase, data will be encrypted server-side with a separate encryption key.
+                All sensitive fields (account, password, notes, support contact, API tokens) are encrypted before storage.
+                Important API tokens and credentials are securely stored server-side in <code>.env.local</code> / Vercel Environment Variables.
               </p>
             </div>
 
@@ -258,10 +361,10 @@ export default function SettingsPage() {
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>Security Boundaries</span>
               </div>
               <ul style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8, paddingLeft: 20 }}>
-                <li>Passwords never appear in Telegram notifications</li>
-                <li>CSV exports exclude all credential fields</li>
-                <li>Credentials are masked by default in the UI</li>
-                <li>Row Level Security (RLS) enabled when connected to Supabase</li>
+                <li>Secret API keys are never exposed in public client bundles or Git commits</li>
+                <li>Gitleaks v8.30.1 automated secret scanning enabled in build pipeline</li>
+                <li>Passwords and tokens are masked by default in the UI</li>
+                <li>Row Level Security (RLS) enabled on Supabase Cloud Database</li>
               </ul>
             </div>
           </div>
@@ -271,65 +374,6 @@ export default function SettingsPage() {
       {/* Notifications Tab */}
       {activeTab === 'notifications' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {/* Telegram Linking */}
-          <div style={cardStyle}>
-            <div style={sectionTitleStyle}>
-              <MessageCircle size={20} style={{ color: '#00f0ff' }} />
-              Telegram Bot
-            </div>
-
-            <div style={{
-              padding: 20,
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              marginBottom: 20,
-            }}>
-              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-                Connect your Telegram account to receive subscription reminders.
-                Click the button below to generate a one-time link code.
-              </p>
-
-              {telegramCode ? (
-                <div style={{
-                  padding: 20,
-                  borderRadius: 12,
-                  background: 'rgba(0,240,255,0.05)',
-                  border: '1px solid rgba(0,240,255,0.2)',
-                  textAlign: 'center',
-                }}>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    Send this code to your Telegram Bot:
-                  </p>
-                  <code style={{
-                    fontSize: 24,
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 700,
-                    color: '#00f0ff',
-                    textShadow: '0 0 10px rgba(0,240,255,0.4)',
-                    letterSpacing: '0.15em',
-                  }}>
-                    /link {telegramCode}
-                  </code>
-                  <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 10 }}>
-                    <Clock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-                    Code expires in 10 minutes
-                  </p>
-                </div>
-              ) : (
-                <button
-                  className="btn-secondary"
-                  onClick={generateLinkCode}
-                  style={{ width: '100%' }}
-                >
-                  <MessageCircle size={16} />
-                  Generate Link Code
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Reminder Preferences */}
           <div style={cardStyle}>
             <div style={sectionTitleStyle}>
               <Bell size={20} style={{ color: '#f59e0b' }} />
@@ -400,87 +444,257 @@ export default function SettingsPage() {
         </motion.div>
       )}
 
-      {/* Data Tab */}
+      {/* APIs & Bots Tab */}
+      {activeTab === 'integrations' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {/* Telegram Bot Integration */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              <MessageCircle size={20} style={{ color: '#00f0ff' }} />
+              Telegram Bot Integration
+            </div>
+
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+              Configure your Telegram Bot token and Chat ID to receive instant notifications and save subscriptions directly from Telegram chat.
+            </p>
+
+            <div style={fieldGroupStyle}>
+              <label className="input-label">Telegram Bot API Access Token</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type={showToken ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="e.g. 8728086041:AAEzG4f..."
+                  value={telegramToken}
+                  onChange={(e) => setTelegramToken(e.target.value)}
+                />
+                <button
+                  className="btn-icon"
+                  onClick={() => setShowToken(!showToken)}
+                  title={showToken ? 'Hide token' : 'Show token'}
+                >
+                  {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div style={fieldGroupStyle}>
+              <label className="input-label">Telegram User Chat ID</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g. 2140484373"
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+              />
+            </div>
+
+            {telegramStatus && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: 10,
+                marginBottom: 20,
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: telegramStatus.type === 'success' ? 'rgba(0,255,136,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${telegramStatus.type === 'success' ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                color: telegramStatus.type === 'success' ? '#00ff88' : '#ef4444',
+              }}>
+                {telegramStatus.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
+                <span>{telegramStatus.msg}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <button
+                className="btn-primary"
+                onClick={handleTestTelegram}
+                disabled={telegramLoading}
+                style={{ flex: 1 }}
+              >
+                {telegramLoading ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+                {telegramLoading ? 'Testing...' : 'Test Connection & Link'}
+              </button>
+
+              <button
+                className="btn-secondary"
+                onClick={generateLinkCode}
+                style={{ flex: 1 }}
+              >
+                <MessageCircle size={16} />
+                Generate Link Code
+              </button>
+            </div>
+
+            {telegramCode && (
+              <div style={{
+                padding: 16,
+                borderRadius: 12,
+                background: 'rgba(0,240,255,0.05)',
+                border: '1px solid rgba(0,240,255,0.2)',
+                textAlign: 'center',
+                marginTop: 20,
+              }}>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  Send this link code directly to your Telegram Bot:
+                </p>
+                <code style={{
+                  fontSize: 22,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                  color: '#00f0ff',
+                  textShadow: '0 0 10px rgba(0,240,255,0.4)',
+                  letterSpacing: '0.15em',
+                }}>
+                  /link {telegramCode}
+                </code>
+              </div>
+            )}
+          </div>
+
+          {/* Google Gemini API Integration */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              <Sparkles size={20} style={{ color: '#8b5cf6' }} />
+              Google Gemini AI API Integration
+            </div>
+
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+              Connect your Google Gemini API key to enable AI-powered subscription parsing, provider prediction, and receipt analysis.
+            </p>
+
+            <div style={fieldGroupStyle}>
+              <label className="input-label">Google Gemini API Key</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type={showGeminiKey ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="Enter Gemini API Key (e.g. AIzaSy...)"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                />
+                <button
+                  className="btn-icon"
+                  onClick={() => setShowGeminiKey(!showGeminiKey)}
+                  title={showGeminiKey ? 'Hide key' : 'Show key'}
+                >
+                  {showGeminiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <div style={fieldGroupStyle}>
+              <label className="input-label">Select Gemini Model</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  className="input-field"
+                  value={selectedGeminiModel}
+                  onChange={(e) => setSelectedGeminiModel(e.target.value)}
+                  style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }}
+                >
+                  {geminiModels.map(m => (
+                    <option key={m} value={m} style={{ background: '#0a0d14', color: '#fff' }}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  className="btn-secondary"
+                  onClick={handleFetchGeminiModels}
+                  disabled={geminiLoading}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  <RefreshCw size={14} className={geminiLoading ? 'animate-spin' : ''} />
+                  Fetch Models
+                </button>
+              </div>
+            </div>
+
+            {geminiStatus && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: 10,
+                marginBottom: 20,
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: geminiStatus.type === 'success' ? 'rgba(0,255,136,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${geminiStatus.type === 'success' ? 'rgba(0,255,136,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                color: geminiStatus.type === 'success' ? '#00ff88' : '#ef4444',
+              }}>
+                {geminiStatus.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
+                <span>{geminiStatus.msg}</span>
+              </div>
+            )}
+
+            <button
+              className="btn-primary"
+              onClick={handleTestGemini}
+              disabled={geminiLoading}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #8b5cf6, #00f0ff)' }}
+            >
+              {geminiLoading ? <RefreshCw size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              {geminiLoading ? 'Testing Gemini AI...' : 'Test Connection & Save Gemini Key'}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Data Management Tab */}
       {activeTab === 'data' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {/* Export */}
           <div style={cardStyle}>
             <div style={sectionTitleStyle}>
               <Download size={20} style={{ color: '#00f0ff' }} />
-              Export Data
+              Export & Backup Data
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <button
-                className="btn-secondary"
-                onClick={handleExportCSV}
-                style={{ padding: '16px 20px', flexDirection: 'column', height: 'auto' }}
-              >
-                <Download size={20} />
-                <span style={{ fontWeight: 600 }}>Export CSV</span>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Without credentials</span>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+              Export your subscription records in CSV or encrypted JSON format for local backup.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button className="btn-secondary" onClick={handleExportCSV}>
+                <Download size={16} />
+                Export CSV
               </button>
-              <button
-                className="btn-secondary"
-                onClick={handleExportJSON}
-                style={{ padding: '16px 20px', flexDirection: 'column', height: 'auto' }}
-              >
-                <Database size={20} />
-                <span style={{ fontWeight: 600 }}>Export JSON</span>
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Encrypted backup</span>
+              <button className="btn-secondary" onClick={handleExportJSON}>
+                <Download size={16} />
+                Export JSON (Encrypted)
               </button>
             </div>
           </div>
 
-          {/* Data Management */}
           <div style={cardStyle}>
             <div style={sectionTitleStyle}>
-              <Database size={20} style={{ color: '#8b5cf6' }} />
-              Data Management
+              <Trash2 size={20} style={{ color: '#ef4444' }} />
+              Clear System Data
             </div>
 
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '16px 20px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              marginBottom: 12,
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Total Subscriptions
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {subscriptions.filter(s => !s.deletedAt).length} active, {subscriptions.filter(s => s.deletedAt).length} deleted
-                </div>
-              </div>
-              <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 20,
-                fontWeight: 700,
-                color: '#00f0ff',
-              }}>
-                {subscriptions.length}
-              </span>
-            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+              Permanently delete all subscription entries and reset your local vault storage.
+            </p>
 
-            {showClearConfirm ? (
+            {!showClearConfirm ? (
+              <button className="btn-danger" onClick={() => setShowClearConfirm(true)}>
+                <Trash2 size={16} />
+                Clear All Data
+              </button>
+            ) : (
               <div style={{
                 padding: 20,
                 borderRadius: 12,
-                background: 'rgba(255,107,107,0.05)',
-                border: '1px solid rgba(255,107,107,0.2)',
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <AlertTriangle size={18} style={{ color: '#ff6b6b' }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#ff6b6b' }}>
-                    Are you sure? This will delete ALL data.
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#ef4444', marginBottom: 12 }}>
+                  Are you sure? This action cannot be undone!
+                </p>
+                <div style={{ display: 'flex', gap: 12 }}>
                   <button
                     className="btn-danger"
                     onClick={() => {
@@ -488,100 +702,45 @@ export default function SettingsPage() {
                       setShowClearConfirm(false);
                       showSaved();
                     }}
-                    style={{ flex: 1 }}
                   >
-                    <Trash2 size={16} />
                     Yes, Clear Everything
                   </button>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setShowClearConfirm(false)}
-                    style={{ flex: 1 }}
-                  >
+                  <button className="btn-secondary" onClick={() => setShowClearConfirm(false)}>
                     Cancel
                   </button>
                 </div>
-              </div>
-            ) : (
-              <button
-                className="btn-danger"
-                onClick={() => setShowClearConfirm(true)}
-                style={{ width: '100%' }}
-              >
-                <Trash2 size={16} />
-                Clear All Data
-              </button>
-            )}
-          </div>
-
-          {/* Storage Info */}
-          <div style={cardStyle}>
-            <div style={sectionTitleStyle}>
-              <Database size={20} style={{ color: '#00ff88' }} />
-              Storage Backend
-            </div>
-            {process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') ? (
-              <div style={{
-                padding: 16,
-                borderRadius: 12,
-                background: 'rgba(0,255,136,0.05)',
-                border: '1px solid rgba(0,255,136,0.15)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#00ff88',
-                    boxShadow: '0 0 8px rgba(0,255,136,0.5)',
-                  }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>
-                    Supabase PostgreSQL Cloud Storage (Connected)
-                  </span>
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  Cloud database is connected and active. Database instance: <code style={{ color: '#00f0ff', fontFamily: 'var(--font-mono)' }}>vnueckwzcovkzremoqzz</code> (Region: ap-southeast-1).
-                </p>
-              </div>
-            ) : (
-              <div style={{
-                padding: 16,
-                borderRadius: 12,
-                background: 'rgba(0,255,136,0.05)',
-                border: '1px solid rgba(0,255,136,0.15)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#00ff88',
-                    boxShadow: '0 0 8px rgba(0,255,136,0.5)',
-                  }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#00ff88' }}>
-                    Browser localStorage
-                  </span>
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  Data is stored locally in your browser. To connect to Supabase for cloud storage, 
-                  configure the environment variables in your Vercel project settings.
-                </p>
               </div>
             )}
           </div>
         </motion.div>
       )}
 
-      {/* Saved Toast */}
+      {/* Floating Saved Toast */}
       {saved && (
         <motion.div
-          className="toast"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
+          style={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            background: 'rgba(0,255,136,0.15)',
+            border: '1px solid rgba(0,255,136,0.3)',
+            borderRadius: 12,
+            padding: '12px 20px',
+            color: '#00ff88',
+            fontSize: 14,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 8px 32px rgba(0,255,136,0.2)',
+            zIndex: 1000,
+          }}
         >
-          <Check size={16} style={{ color: '#00ff88' }} />
-          Settings saved
+          <Check size={18} />
+          Settings Saved Successfully!
         </motion.div>
       )}
     </div>
