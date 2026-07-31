@@ -8,7 +8,7 @@ import { encrypt } from '@/lib/encryption';
 
 export const runtime = 'nodejs';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8728086041:AAEzG4fGumZcTvxW-SI9QwAU5RAdFBbtI6A';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const VAULT_ENCRYPTION_KEY = process.env.VAULT_ENCRYPTION_KEY;
 
 interface ParsedEntry {
