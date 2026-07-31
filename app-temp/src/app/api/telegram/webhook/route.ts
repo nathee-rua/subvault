@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       user_id: '00000000-0000-0000-0000-000000000000',
       provider_name: providerName,
       category,
-      planName: 'API Key / Sub',
+      plan_name: 'API Key / Sub',
       billing_cycle: 'monthly',
       amount: 0,
       currency: 'USD',
