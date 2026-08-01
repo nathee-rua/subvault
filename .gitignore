@@ -40,3 +40,11 @@ coverage/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ide & mcp configs
+.mcp.json
+.vscode/
+.claude/
+.agents/
+.testsprite/
+
